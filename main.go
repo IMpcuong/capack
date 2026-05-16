@@ -88,7 +88,7 @@ func main() {
 		if assignedIP == nil {
 			continue
 		}
-		fmt.Println(*assignedIP)
+		log.Println(*assignedIP)
 	}
 
 	ifaceNames, err := getIFaceNameDarwin()
@@ -97,7 +97,7 @@ func main() {
 	}
 	_snapshotLen := int32(1024)
 	_promiscuous := false
-	_timeout := 10000 * time.Millisecond
+	_timeout := 1000 * time.Millisecond
 	canBindToDev := false
 	for _, ifaceName := range ifaceNames {
 		if canBindToDev {
@@ -105,16 +105,18 @@ func main() {
 		}
 
 		handle, err := pcap.OpenLive(ifaceName, _snapshotLen, _promiscuous, _timeout)
-		if err != nil {
+		if err != nil || handle == nil {
 			log.Println(err)
+			continue
 		}
 		defer handle.Close()
-		canBindToDev = true
 
 		_filter := "tcp src port 443 and tcp[tcpflags] & (tcp-syn|tcp-ack) = (tcp-syn|tcp-ack)"
 		if err := handle.SetBPFFilter(_filter); err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			continue
 		}
+		canBindToDev = true
 
 		packetSrc := gopacket.NewPacketSource(handle, handle.LinkType())
 		var cnt int
